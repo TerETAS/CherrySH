@@ -218,6 +218,17 @@ int shell_init(uint8_t busid, uint32_t regbase, bool need_login)
     csh_init.sget = csh_sget_cb;
 
 #if defined(CONFIG_CSH_SYMTAB) && CONFIG_CSH_SYMTAB
+#ifdef __ARMCC_VERSION /* ARM C Compiler */
+    extern const int FSymTab$$Base;
+    extern const int FSymTab$$Limit;
+    extern const int VSymTab$$Base;
+    extern const int VSymTab$$Limit;
+    /*!< get table from ld symbol */
+    csh_init.command_table_beg = &FSymTab$$Base;
+    csh_init.command_table_end = &FSymTab$$Limit;
+    csh_init.variable_table_beg = &VSymTab$$Base;
+    csh_init.variable_table_end = &VSymTab$$Limit;
+#elif defined(__GNUC__)
     extern const int __fsymtab_start;
     extern const int __fsymtab_end;
     extern const int __vsymtab_start;
@@ -228,6 +239,7 @@ int shell_init(uint8_t busid, uint32_t regbase, bool need_login)
     csh_init.command_table_end = &__fsymtab_end;
     csh_init.variable_table_beg = &__vsymtab_start;
     csh_init.variable_table_end = &__vsymtab_end;
+#endif
 #endif
 
 #if defined(CONFIG_CSH_PROMPTEDIT) && CONFIG_CSH_PROMPTEDIT

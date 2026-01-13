@@ -17,17 +17,10 @@ static volatile bool login = false;
 static chry_ringbuffer_t shell_rb;
 static uint8_t mempool[1024];
 
-static StaticTask_t task_buffer_repl;
-static StaticTask_t task_buffer_exec;
-
-static StackType_t task_stack_repl[1024];
-static StackType_t task_stack_exec[1024];
-
 static TaskHandle_t task_hdl_repl = NULL;
 static TaskHandle_t task_hdl_exec = NULL;
 
 static EventGroupHandle_t event_hdl;
-static StaticEventGroup_t event_grp;
 
 void shell_uart_isr(void)
 {
@@ -161,7 +154,8 @@ int chry_shell_port_create_context(chry_shell_t *csh, int argc, const char **arg
         vTaskDelete(*p_task_hdl_exec);
     }
 
-    *p_task_hdl_exec = xTaskCreateStatic(task_exec, "task_exec", 1024U, NULL, task_exec_PRIORITY, task_stack_exec, &task_buffer_exec);
+    xTaskCreate(task_exec, "task_exec", 1024U, NULL, task_exec_PRIORITY, &task_hdl_exec);
+    *p_task_hdl_exec = &task_hdl_exec;
     return 0;
 }
 
@@ -234,6 +228,17 @@ int shell_init(UART_Type *uart, bool need_login)
     csh_init.sget = csh_sget_cb;
 
 #if defined(CONFIG_CSH_SYMTAB) && CONFIG_CSH_SYMTAB
+#ifdef __ARMCC_VERSION /* ARM C Compiler */
+    extern const int FSymTab$$Base;
+    extern const int FSymTab$$Limit;
+    extern const int VSymTab$$Base;
+    extern const int VSymTab$$Limit;
+    /*!< get table from ld symbol */
+    csh_init.command_table_beg = &FSymTab$$Base;
+    csh_init.command_table_end = &FSymTab$$Limit;
+    csh_init.variable_table_beg = &VSymTab$$Base;
+    csh_init.variable_table_end = &VSymTab$$Limit;
+#elif defined(__GNUC__)
     extern const int __fsymtab_start;
     extern const int __fsymtab_end;
     extern const int __vsymtab_start;
@@ -244,6 +249,7 @@ int shell_init(UART_Type *uart, bool need_login)
     csh_init.command_table_end = &__fsymtab_end;
     csh_init.variable_table_beg = &__vsymtab_start;
     csh_init.variable_table_end = &__vsymtab_end;
+#endif
 #endif
 
 #if defined(CONFIG_CSH_PROMPTEDIT) && CONFIG_CSH_PROMPTEDIT
@@ -286,8 +292,8 @@ int shell_init(UART_Type *uart, bool need_login)
     }
 
     task_hdl_exec = NULL;
-    event_hdl = xEventGroupCreateStatic(&event_grp);
-    task_hdl_repl = xTaskCreateStatic(task_repl, "task_repl", 1024U, NULL, task_repl_PRIORITY, task_stack_repl, &task_buffer_repl);
+    event_hdl = xEventGroupCreate();
+    task_hdl_repl = xTaskCreate(task_repl, "task_repl", 1024U, NULL, task_repl_PRIORITY, &task_hdl_repl);
 
     return 0;
 }

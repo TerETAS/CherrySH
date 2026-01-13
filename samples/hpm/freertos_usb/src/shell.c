@@ -22,17 +22,10 @@ static volatile bool login = false;
 static chry_ringbuffer_t shell_rb;
 static uint8_t mempool[1024];
 
-static StaticTask_t task_buffer_repl;
-static StaticTask_t task_buffer_exec;
-
-static StackType_t task_stack_repl[1024];
-static StackType_t task_stack_exec[1024];
-
 static TaskHandle_t task_hdl_repl = NULL;
 static TaskHandle_t task_hdl_exec = NULL;
 
 static EventGroupHandle_t event_hdl;
-static StaticEventGroup_t event_grp;
 
 /*!< endpoint address */
 #define CDC_IN_EP  0x81
@@ -315,7 +308,8 @@ int chry_shell_port_create_context(chry_shell_t *csh, int argc, const char **arg
         vTaskDelete(*p_task_hdl_exec);
     }
 
-    *p_task_hdl_exec = xTaskCreateStatic(task_exec, "task_exec", 1024U, NULL, task_exec_PRIORITY, task_stack_exec, &task_buffer_exec);
+    *p_task_hdl_exec = xTaskCreate(task_exec, "task_exec", 1024U, NULL, task_exec_PRIORITY, &task_hdl_exec);
+    *p_task_hdl_exec = &task_hdl_exec;
     return 0;
 }
 
@@ -441,8 +435,8 @@ int shell_init(uint8_t busid, uint32_t regbase, bool need_login)
     }
 
     task_hdl_exec = NULL;
-    event_hdl = xEventGroupCreateStatic(&event_grp);
-    task_hdl_repl = xTaskCreateStatic(task_repl, "task_repl", 1024U, NULL, task_repl_PRIORITY, task_stack_repl, &task_buffer_repl);
+    event_hdl = xEventGroupCreate();
+    xTaskCreate(task_repl, "task_repl", 1024U, NULL, task_repl_PRIORITY, &task_hdl_repl);
 
     return 0;
 }
