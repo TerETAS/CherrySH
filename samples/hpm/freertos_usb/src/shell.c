@@ -126,27 +126,27 @@ USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t usb_temp_write_buffer[1024];
 static void usbd_event_handler(uint8_t busid, uint8_t event)
 {
     switch (event) {
-    case USBD_EVENT_RESET:
-        break;
-    case USBD_EVENT_CONNECTED:
-        break;
-    case USBD_EVENT_DISCONNECTED:
-        break;
-    case USBD_EVENT_RESUME:
-        break;
-    case USBD_EVENT_SUSPEND:
-        break;
-    case USBD_EVENT_CONFIGURED:
-        /* setup first out ep read transfer */
-        usbd_ep_start_read(busid, CDC_OUT_EP, usb_temp_read_buffer, CDC_MAX_MPS);
-        break;
-    case USBD_EVENT_SET_REMOTE_WAKEUP:
-        break;
-    case USBD_EVENT_CLR_REMOTE_WAKEUP:
-        break;
+        case USBD_EVENT_RESET:
+            break;
+        case USBD_EVENT_CONNECTED:
+            break;
+        case USBD_EVENT_DISCONNECTED:
+            break;
+        case USBD_EVENT_RESUME:
+            break;
+        case USBD_EVENT_SUSPEND:
+            break;
+        case USBD_EVENT_CONFIGURED:
+            /* setup first out ep read transfer */
+            usbd_ep_start_read(busid, CDC_OUT_EP, usb_temp_read_buffer, CDC_MAX_MPS);
+            break;
+        case USBD_EVENT_SET_REMOTE_WAKEUP:
+            break;
+        case USBD_EVENT_CLR_REMOTE_WAKEUP:
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 }
 
@@ -213,8 +213,9 @@ static uint16_t csh_sget_cb(chry_readline_t *rl, void *data, uint16_t size)
 
 static void wait_char(void)
 {
+    EventBits_t event;
 wait:
-    EventBits_t event = xEventGroupWaitBits(event_hdl, (0x10 | 0x01 | 0x04), pdTRUE, pdFALSE, portMAX_DELAY);
+    event = xEventGroupWaitBits(event_hdl, (0x10 | 0x01 | 0x04), pdTRUE, pdFALSE, portMAX_DELAY);
     if ((event & 0x10) == 0) {
         if (event & 0x01) {
             chry_readline_erase_line(&csh.rl);
@@ -309,7 +310,7 @@ int chry_shell_port_create_context(chry_shell_t *csh, int argc, const char **arg
     }
 
     *p_task_hdl_exec = xTaskCreate(task_exec, "task_exec", 1024U, NULL, task_exec_PRIORITY, &task_hdl_exec);
-    *p_task_hdl_exec = &task_hdl_exec;
+    p_task_hdl_exec = &task_hdl_exec;
     return 0;
 }
 
@@ -367,8 +368,7 @@ int shell_init(uint8_t busid, uint32_t regbase, bool need_login)
 
     cdc_acm_init(busid, regbase);
 
-    while(!usb_device_is_configured(busid))
-    {
+    while (!usb_device_is_configured(busid)) {
         vTaskDelay(100);
     }
 

@@ -50,8 +50,9 @@ static uint16_t csh_sget_cb(chry_readline_t *rl, void *data, uint16_t size)
 
 static void wait_char(void)
 {
+    EventBits_t event;
 wait:
-    EventBits_t event = xEventGroupWaitBits(event_hdl, (0x10 | 0x01 | 0x04), pdTRUE, pdFALSE, portMAX_DELAY);
+    event = xEventGroupWaitBits(event_hdl, (0x10 | 0x01 | 0x04), pdTRUE, pdFALSE, portMAX_DELAY);
     if ((event & 0x10) == 0) {
         if (event & 0x01) {
             chry_readline_erase_line(&csh.rl);
@@ -146,7 +147,7 @@ int chry_shell_port_create_context(chry_shell_t *csh, int argc, const char **arg
     }
 
     xTaskCreate(task_exec, "task_exec", 1024U, NULL, task_exec_PRIORITY, &task_hdl_exec);
-    *p_task_hdl_exec = &task_hdl_exec;
+    p_task_hdl_exec = &task_hdl_exec;
     return 0;
 }
 
